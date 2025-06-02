@@ -4,13 +4,17 @@ import type { LineDistribution } from "@/types/line-distribution"
 import { mockGroups, mockDistributions } from "./mock-data"
 
 // 環境変数が設定されているか確認し、モックデータを使用するか判断する
-const useSupabase =
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://your-supabase-project.supabase.co" &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== "your-supabase-anon-key"
+const useSupabase = 
+  process.env.NEXT_PUBLIC_SUPABASE_URL && 
+  process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 && 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
 
-console.log("Using Supabase:", useSupabase)
+console.log('環境変数の状態:', {
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '設定されています' : '設定されていません'
+})
+console.log('Supabaseを使用:', useSupabase)
 
 export interface KpopGroup {
   id: string

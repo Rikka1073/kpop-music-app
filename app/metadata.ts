@@ -1,4 +1,4 @@
-import { Metadata } from 'next'
+import { Metadata, Viewport } from 'next'
 
 export const siteConfig = {
   name: 'K-pop Line Distribution Viewer',
@@ -10,6 +10,13 @@ export const siteConfig = {
   },
 }
 
+// ビューポートメタデータを別のエクスポートとして設定
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
+
 export const baseMetadata: Metadata = {
   title: {
     default: siteConfig.name,
@@ -19,7 +26,6 @@ export const baseMetadata: Metadata = {
   keywords: ['K-pop', 'ライン配分', 'ミュージックビデオ', '歌唱時間', 'アイドル'],
   authors: [{ name: 'K-pop Music App' }],
   creator: 'K-pop Music App',
-  viewport: 'width=device-width, initial-scale=1',
   openGraph: {
     type: 'website',
     locale: 'ja_JP',
@@ -48,5 +54,5 @@ export const baseMetadata: Metadata = {
     shortcut: '/favicon-16x16.png',
     apple: '/apple-touch-icon.png',
   },
-  manifest: `${siteConfig.url}/site.webmanifest`,
+  manifest: '/site.webmanifest',
 }

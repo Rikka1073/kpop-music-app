@@ -1,11 +1,12 @@
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
-import { baseMetadata } from './metadata'
+import { baseMetadata, viewport } from './metadata'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = baseMetadata
+export { viewport }
 
 export default function RootLayout({
   children,
