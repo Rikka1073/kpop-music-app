@@ -8,7 +8,7 @@ interface KpopStore {
   groups: KpopGroup[]
   selectedGroup: KpopGroup | null
   isLoading: boolean
-  setSelectedGroup: (group: KpopGroup) => void
+  setSelectedGroup: (group: KpopGroup | null) => void
   loadGroups: () => Promise<void>
 }
 
