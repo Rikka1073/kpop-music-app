@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { LineDistribution, SingingTimeStats } from "@/types/line-distribution"
 import { formatTime } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,46 +39,51 @@ export default function SingingTimeEditor({
       (distribution.lines.length > 0 ? Math.max(...distribution.lines.map((line) => line.endTime)) : 180),
   )
 
-  // 歌唱時間統計を計算
-  const calculateSingingStats = (currentPlayTime: number): SingingTimeStats[] => {
-    const totalDuration = targetDuration
+  // 歌唱時間統計を計算する関数をuseCallbackでメモ化
+  const calculateSingingStats = useCallback(
+    (currentPlayTime: number): SingingTimeStats[] => {
+      const totalDuration = targetDuration
 
-    return distribution.members.map((member) => {
-      const memberLines = distribution.lines.filter((line) => line.memberId === member.id)
-      const totalTime = memberLines.reduce((sum, line) => sum + (line.endTime - line.startTime), 0)
+      return distribution.members.map((member) => {
+        const memberLines = distribution.lines.filter((line) => line.memberId === member.id)
+        const totalTime = memberLines.reduce((sum, line) => sum + (line.endTime - line.startTime), 0)
 
-      let currentTime = 0
-      memberLines.forEach((line) => {
-        if (currentPlayTime > line.endTime) {
-          currentTime += line.endTime - line.startTime
-        } else if (currentPlayTime > line.startTime && currentPlayTime <= line.endTime) {
-          currentTime += currentPlayTime - line.startTime
+        let currentTime = 0
+        memberLines.forEach((line) => {
+          if (currentPlayTime > line.endTime) {
+            currentTime += line.endTime - line.startTime
+          } else if (currentPlayTime > line.startTime && currentPlayTime <= line.endTime) {
+            currentTime += currentPlayTime - line.startTime
+          }
+        })
+
+        const percentage = totalDuration > 0 ? (totalTime / totalDuration) * 100 : 0
+
+        return {
+          memberId: member.id,
+          totalTime,
+          percentage,
+          currentTime: Math.max(0, currentTime),
         }
       })
+    },
+    [distribution.members, distribution.lines, targetDuration],
+  )
 
-      const percentage = totalDuration > 0 ? (totalTime / totalDuration) * 100 : 0
-
-      return {
-        memberId: member.id,
-        totalTime,
-        percentage,
-        currentTime: Math.max(0, currentTime),
-      }
-    })
-  }
-
+  // 初期計算とdistribution変更時の計算
   useEffect(() => {
     setSingingStats(calculateSingingStats(currentTime))
-  }, [distribution, currentTime, targetDuration])
+  }, [calculateSingingStats, currentTime])
 
+  // リアルタイム更新（再生中のみ）- intervalを使用してcurrentTimeの依存を避ける
   useEffect(() => {
     if (isPlaying) {
       const interval = setInterval(() => {
-        setSingingStats(calculateSingingStats(currentTime))
+        setSingingStats((prevStats) => calculateSingingStats(currentTime))
       }, 100)
       return () => clearInterval(interval)
     }
-  }, [isPlaying, currentTime, distribution, targetDuration])
+  }, [isPlaying, calculateSingingStats, currentTime])
 
   // 目標歌唱時間を設定
   const handleSetTargetTime = (memberId: string, targetTime: number) => {

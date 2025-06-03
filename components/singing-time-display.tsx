@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { LineDistribution, SingingTimeStats } from "@/types/line-distribution"
 import { formatTime } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
@@ -13,55 +13,58 @@ interface SingingTimeDisplayProps {
 export default function SingingTimeDisplay({ distribution, currentTime, isPlaying }: SingingTimeDisplayProps) {
   const [singingStats, setSingingStats] = useState<SingingTimeStats[]>([])
 
-  // 歌唱時間統計を計算
-  const calculateSingingStats = (currentPlayTime: number): SingingTimeStats[] => {
-    const totalDuration =
-      distribution.totalDuration ||
-      (distribution.lines.length > 0 ? Math.max(...distribution.lines.map((line) => line.endTime)) : 0)
+  // 歌唱時間統計を計算する関数をuseCallbackでメモ化
+  const calculateSingingStats = useCallback(
+    (currentPlayTime: number): SingingTimeStats[] => {
+      const totalDuration =
+        distribution.totalDuration ||
+        (distribution.lines.length > 0 ? Math.max(...distribution.lines.map((line) => line.endTime)) : 0)
 
-    return distribution.members.map((member) => {
-      // 該当メンバーの全ラインの総時間を計算
-      const memberLines = distribution.lines.filter((line) => line.memberId === member.id)
-      const totalTime = memberLines.reduce((sum, line) => sum + (line.endTime - line.startTime), 0)
+      return distribution.members.map((member) => {
+        // 該当メンバーの全ラインの総時間を計算
+        const memberLines = distribution.lines.filter((line) => line.memberId === member.id)
+        const totalTime = memberLines.reduce((sum, line) => sum + (line.endTime - line.startTime), 0)
 
-      // 現在時刻までに歌った時間を計算
-      let currentTime = 0
-      memberLines.forEach((line) => {
-        if (currentPlayTime > line.endTime) {
-          // ライン全体が再生済み
-          currentTime += line.endTime - line.startTime
-        } else if (currentPlayTime > line.startTime && currentPlayTime <= line.endTime) {
-          // ライン途中まで再生済み
-          currentTime += currentPlayTime - line.startTime
+        // 現在時刻までに歌った時間を計算
+        let currentTime = 0
+        memberLines.forEach((line) => {
+          if (currentPlayTime > line.endTime) {
+            // ライン全体が再生済み
+            currentTime += line.endTime - line.startTime
+          } else if (currentPlayTime > line.startTime && currentPlayTime <= line.endTime) {
+            // ライン途中まで再生済み
+            currentTime += currentPlayTime - line.startTime
+          }
+        })
+
+        const percentage = totalDuration > 0 ? (totalTime / totalDuration) * 100 : 0
+
+        return {
+          memberId: member.id,
+          totalTime,
+          percentage,
+          currentTime: Math.max(0, currentTime),
         }
       })
-
-      const percentage = totalDuration > 0 ? (totalTime / totalDuration) * 100 : 0
-
-      return {
-        memberId: member.id,
-        totalTime,
-        percentage,
-        currentTime: Math.max(0, currentTime),
-      }
-    })
-  }
+    },
+    [distribution.members, distribution.lines, distribution.totalDuration],
+  )
 
   // 初期計算
   useEffect(() => {
     setSingingStats(calculateSingingStats(currentTime))
-  }, [distribution, currentTime])
+  }, [calculateSingingStats, currentTime])
 
   // リアルタイム更新（再生中のみ）
   useEffect(() => {
     if (isPlaying) {
       const interval = setInterval(() => {
-        setSingingStats(calculateSingingStats(currentTime))
+        setSingingStats((prevStats) => calculateSingingStats(currentTime))
       }, 100)
 
       return () => clearInterval(interval)
     }
-  }, [isPlaying, currentTime, distribution])
+  }, [isPlaying, calculateSingingStats, currentTime])
 
   // 現在歌っているメンバーを取得
   const getCurrentSinger = () => {

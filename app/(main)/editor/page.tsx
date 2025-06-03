@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatTime } from "@/lib/utils"
 import SingingTimeEditor from "@/components/singing-time-editor"
+import { getLineDistribution } from "@/lib/kpop-service"
 
 export default function EditorPage() {
   const searchParams = useSearchParams()
@@ -50,6 +51,7 @@ export default function EditorPage() {
   const [editingMember, setEditingMember] = useState<Member | null>(null)
 
   const playerRef = useRef<any>(null)
+  const lastTimeUpdateRef = useRef<number>(0)
 
   useEffect(() => {
     if (distId && savedDistributions.length > 0) {
@@ -62,13 +64,38 @@ export default function EditorPage() {
     }
   }, [distId, savedDistributions])
 
-  const handleTimeUpdate = (time: number) => {
-    setCurrentTime(time)
-  }
+  useEffect(() => {
+    const loadDistributionData = async () => {
+      if (distId) {
+        try {
+          const dist = await getLineDistribution(distId)
+          if (dist) {
+            setDistribution(dist)
+            setCurrentVideoId(dist.youtubeId)
+            setVideoInput(dist.youtubeId)
+          }
+        } catch (error) {
+          console.error("Failed to load distribution data:", error)
+        }
+      }
+    }
 
-  const handlePlayerStateChange = (state: number) => {
+    loadDistributionData()
+  }, [distId])
+
+  // useCallbackを使用して関数を安定化
+  const handleTimeUpdate = useCallback((time: number) => {
+    // 更新頻度を制限（前回の更新から100ms以上経過している場合のみ更新）
+    const now = Date.now()
+    if (now - lastTimeUpdateRef.current > 100) {
+      lastTimeUpdateRef.current = now
+      setCurrentTime(time)
+    }
+  }, [])
+
+  const handlePlayerStateChange = useCallback((state: number) => {
     setIsPlaying(state === 1) // 1 = playing
-  }
+  }, [])
 
   const handleVideoSubmit = (e: React.FormEvent) => {
     e.preventDefault()
